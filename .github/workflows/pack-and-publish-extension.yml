@@ -1,78 +1,94 @@
-name: Pack Chrome Extension
+name: Pack & Publish Chrome Extension
 
 on:
-  pull_request:
-    branches: ["main"]
-
   push:
-    branches: ["main"]
-    tags: ["v*"]
-
-  workflow_dispatch:
-    inputs:
-      create_release:
-        description: "Create a GitHub Release"
-        type: boolean
-        default: false
-      tag_name:
-        description: "Release tag (required if create_release=true and not a tag push)"
-        required: false
-      prerelease:
-        description: "Mark release as prerelease"
-        type: boolean
-        default: false
+    branches: [main]
+  workflow_dispatch: {}
 
 permissions:
   contents: write
 
 jobs:
-  pack:
+  release:
+    # Avoid infinite loop when the workflow commits version bumps
+    if: |
+      github.actor != 'github-actions[bot]' &&
+      !contains(github.event.head_commit.message, '[skip ci]')
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout (with tags)
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Validate manifest
-        run: test -f manifest.json
+      - name: Determine next version (Conventional Commits)
+        id: semver
+        uses: PaulHatch/semantic-version@v5.4.0
+        with:
+          tag_prefix: "v"
+          major_pattern: "/!:|BREAKING CHANGE:/"
+          minor_pattern: "/feat:/"
+          version_format: "${major}.${minor}.${patch}"
 
-      - name: Build zip
-        id: zip
-        shell: bash
+      - name: Update manifest.json version
+        if: steps.semver.outputs.version_type != 'none'
         run: |
-          set -euo pipefail
+          chmod +x scripts/set-version.sh
+          scripts/set-version.sh "${{ steps.semver.outputs.version }}"
 
-          EXT_NAME=$(python - <<'PY'
-import json,re
-m=json.load(open("manifest.json"))
-name=re.sub(r"[^A-Za-z0-9._-]+","-",m.get("name","chrome-extension")).lower()
-print(name.strip("-"))
-PY
-)
-          VERSION=$(python - <<'PY'
-import json
-print(json.load(open("manifest.json")).get("version","0.0.0"))
-PY
-)
-          SHA="${GITHUB_SHA::7}"
+      - name: Commit version bump
+        if: steps.semver.outputs.version_type != 'none'
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore(release): v${{ steps.semver.outputs.version }} [skip ci]"
+          file_pattern: manifest.json
 
-          ZIP_NAME="${EXT_NAME}-${VERSION}-${SHA}.zip"
+      - name: Read HEAD SHA (after commit)
+        if: steps.semver.outputs.version_type != 'none'
+        id: head
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { execSync } = require('node:child_process');
+            const sha = execSync('git rev-parse HEAD').toString().trim();
+            core.setOutput('sha', sha);
 
-          zip -r "$ZIP_NAME" . \
-            -x ".git/*" ".github/*" "node_modules/*" "dist/*" "*.md"
+      - name: Create tag vX.Y.Z
+        if: steps.semver.outputs.version_type != 'none'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tag = '${{ steps.semver.outputs.version_tag }}';
+            const sha = '${{ steps.head.outputs.sha }}';
 
-          echo "zip_name=$ZIP_NAME" >> "$GITHUB_OUTPUT"
+            try {
+              await github.rest.git.createRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: `refs/tags/${tag}`,
+                sha
+              });
+              core.info(`Created tag ${tag} -> ${sha}`);
+            } catch (e) {
+              if (e.status === 422) {
+                core.info(`Tag ${tag} already exists; continuing.`);
+              } else {
+                throw e;
+              }
+            }
 
-      - name: Create GitHub Release (tag push)
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Zip extension (no bash)
+        if: steps.semver.outputs.version_type != 'none'
+        uses: TheDoctor0/zip-release@0.7.6
+        with:
+          type: "zip"
+          filename: "chrome-extension-${{ steps.semver.outputs.version_tag }}.zip"
+          exclusions: "*.git* /*node_modules/* *.github/* dist/* *.md"
+
+      - name: Create GitHub Release + attach zip
+        if: steps.semver.outputs.version_type != 'none'
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ steps.zip.outputs.zip_name }}
-
-      - name: Create GitHub Release (manual)
-        if: github.event_name == 'workflow_dispatch' && inputs.create_release == true
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ inputs.tag_name }}
-          prerelease: ${{ inputs.prerelease }}
-          files: ${{ steps.zip.outputs.zip_name }}
+          tag_name: ${{ steps.semver.outputs.version_tag }}
+          files: chrome-extension-${{ steps.semver.outputs.version_tag }}.zip
