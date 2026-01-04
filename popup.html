@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WhatNot Mod Helper Tools</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      width: 500px;
+      max-height: 700px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      padding: 0;
+      overflow: hidden;
+    }
+    
+    .header {
+      padding: 16px;
+      border-bottom: 1px solid #e5e7eb;
+      background: #fff;
+    }
+    
+    h1 {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1a1a1a;
+      margin-bottom: 4px;
+    }
+    
+    .subtitle {
+      font-size: 12px;
+      color: #666;
+    }
+    
+    .tabs {
+      display: flex;
+      background: #f9fafb;
+      border-bottom: 1px solid #e5e7eb;
+      padding: 0 8px;
+    }
+    
+    .tab {
+      padding: 12px 20px;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: #666;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+    
+    .tab:hover {
+      color: #333;
+      background: #f3f4f6;
+    }
+    
+    .tab.active {
+      color: #6366f1;
+      border-bottom-color: #6366f1;
+      background: #fff;
+    }
+    
+    .tab-content {
+      display: none;
+      padding: 16px;
+      max-height: 580px;
+      overflow-y: auto;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    .controls {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    
+    button {
+      flex: 1;
+      padding: 8px 16px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      background: #fff;
+      color: #333;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    button:hover {
+      background: #f5f5f5;
+      border-color: #bbb;
+    }
+    
+    button:active {
+      background: #eee;
+    }
+    
+    button.primary {
+      background: #6366f1;
+      color: #fff;
+      border-color: #6366f1;
+    }
+    
+    button.primary:hover {
+      background: #4f46e5;
+      border-color: #4f46e5;
+    }
+    
+    .info {
+      padding: 8px 12px;
+      background: #f0f9ff;
+      border: 1px solid #bae6fd;
+      border-radius: 6px;
+      margin-bottom: 16px;
+      font-size: 13px;
+      color: #0369a1;
+    }
+    
+    .info.error {
+      background: #fef2f2;
+      border-color: #fecaca;
+      color: #991b1b;
+    }
+    
+    .buyers-list {
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      padding: 8px;
+      background: #fafafa;
+      margin-bottom: 16px;
+    }
+    
+    .buyer-item {
+      padding: 6px 8px;
+      font-size: 13px;
+      color: #333;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .buyer-item:last-child {
+      border-bottom: none;
+    }
+    
+    .empty {
+      text-align: center;
+      padding: 32px 16px;
+      color: #999;
+      font-size: 14px;
+    }
+    
+    .count {
+      font-weight: 600;
+      color: #6366f1;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 32px;
+      color: #666;
+    }
+    
+    .template-section {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid #e5e7eb;
+    }
+    
+    .template-section h2 {
+      font-size: 14px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 8px;
+    }
+    
+    .template-controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    
+    .template-controls label {
+      font-size: 13px;
+      color: #666;
+      white-space: nowrap;
+    }
+    
+    .template-controls select {
+      padding: 6px 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 13px;
+      background: #fff;
+      cursor: pointer;
+    }
+    
+    textarea {
+      width: 100%;
+      min-height: 80px;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 13px;
+      font-family: inherit;
+      resize: vertical;
+      margin-bottom: 8px;
+    }
+    
+    textarea:focus {
+      outline: none;
+      border-color: #6366f1;
+    }
+    
+    .template-hint {
+      font-size: 11px;
+      color: #999;
+      margin-bottom: 8px;
+    }
+    
+    .messages-output {
+      margin-top: 12px;
+      max-height: 300px;
+      overflow-y: auto;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      padding: 8px;
+      background: #fafafa;
+      display: none;
+    }
+    
+    .messages-output.visible {
+      display: block;
+    }
+    
+    .message-item {
+      padding: 8px;
+      margin-bottom: 8px;
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 4px;
+      font-size: 12px;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    
+    .message-item:last-child {
+      margin-bottom: 0;
+    }
+    
+    .message-header {
+      font-weight: 600;
+      color: #6366f1;
+      margin-bottom: 4px;
+      font-size: 11px;
+    }
+    
+    .coming-soon {
+      text-align: center;
+      padding: 60px 20px;
+      color: #999;
+    }
+    
+    .coming-soon-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+    
+    .coming-soon-text {
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>WhatNot Mod Helper Tools</h1>
+    <div class="subtitle">Tools for stream moderators</div>
+  </div>
+  
+  <div class="tabs">
+    <button class="tab active" data-tab="buyers">Buyers</button>
+    <button class="tab" data-tab="more">More</button>
+  </div>
+  
+  <!-- Buyers Tab -->
+  <div id="buyers-tab" class="tab-content active">
+    <div id="info" class="info" style="display: none;"></div>
+    
+    <div class="controls">
+      <button id="extractBtn" class="primary">Extract Buyers</button>
+      <button id="copyBtn">Copy List</button>
+    </div>
+    
+    <div id="buyersList" class="buyers-list">
+      <div class="empty">Click "Extract Buyers" to get started</div>
+    </div>
+    
+    <div class="template-section">
+      <h2>Message Template</h2>
+      <div class="template-controls">
+        <label for="buyersPerMessage">Buyers per message:</label>
+        <select id="buyersPerMessage">
+          <option value="1">1</option>
+          <option value="5">5</option>
+          <option value="10">10</option>
+          <option value="20">20</option>
+          <option value="30">30</option>
+          <option value="10">40</option>
+        </select>
+      </div>
+      <textarea id="messageTemplate" placeholder="Buyers Givvy in 15 minutes... 
+
+{{Buyers}}"></textarea>
+      <div class="template-hint">Use {{Buyers}} as a placeholder for the buyer list</div>
+      <div class="controls">
+        <button id="generateBtn" class="primary" style="flex: 1;">Generate Messages</button>
+        <button id="copyMessagesBtn" style="flex: 1;">Copy All Messages</button>
+      </div>
+      <div id="messagesOutput" class="messages-output"></div>
+    </div>
+  </div>
+  
+  <!-- More Tab (Placeholder for future features) -->
+  <div id="more-tab" class="tab-content">
+    <div class="coming-soon">
+      <div class="coming-soon-icon">🚀</div>
+      <div class="coming-soon-text">More features coming soon!</div>
+    </div>
+  </div>
+  
+  <script src="popup.js"></script>
+</body>
+</html>
