@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "WhatNot Mod Helper Tools Extension",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Helper tools for WhatNot stream moderators",
   "permissions": [
     "activeTab",
@@ -13,8 +13,12 @@
   ],
   "content_scripts": [
     {
-      "matches": ["https://www.whatnot.com/*"],
-      "js": ["content.js"],
+      "matches": [
+        "https://www.whatnot.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
       "run_at": "document_idle"
     }
   ],
