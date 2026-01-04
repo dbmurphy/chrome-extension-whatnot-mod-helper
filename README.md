@@ -71,4 +71,4 @@ You'll need to create icon files (`icon16.png`, `icon48.png`, `icon128.png`) for
 
 ## License
 
-This extension is provided as-is for personal use.
+See LISCENSE.md
