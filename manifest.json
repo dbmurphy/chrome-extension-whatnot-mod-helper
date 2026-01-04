@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "WhatNot Mod Helper Tools Extension",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Helper tools for WhatNot stream moderators",
   "permissions": [
     "activeTab",
