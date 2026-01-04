@@ -1,0 +1,78 @@
+name: Pack Chrome Extension
+
+on:
+  pull_request:
+    branches: ["main"]
+
+  push:
+    branches: ["main"]
+    tags: ["v*"]
+
+  workflow_dispatch:
+    inputs:
+      create_release:
+        description: "Create a GitHub Release"
+        type: boolean
+        default: false
+      tag_name:
+        description: "Release tag (required if create_release=true and not a tag push)"
+        required: false
+      prerelease:
+        description: "Mark release as prerelease"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  pack:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate manifest
+        run: test -f manifest.json
+
+      - name: Build zip
+        id: zip
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          EXT_NAME=$(python - <<'PY'
+import json,re
+m=json.load(open("manifest.json"))
+name=re.sub(r"[^A-Za-z0-9._-]+","-",m.get("name","chrome-extension")).lower()
+print(name.strip("-"))
+PY
+)
+          VERSION=$(python - <<'PY'
+import json
+print(json.load(open("manifest.json")).get("version","0.0.0"))
+PY
+)
+          SHA="${GITHUB_SHA::7}"
+
+          ZIP_NAME="${EXT_NAME}-${VERSION}-${SHA}.zip"
+
+          zip -r "$ZIP_NAME" . \
+            -x ".git/*" ".github/*" "node_modules/*" "dist/*" "*.md"
+
+          echo "zip_name=$ZIP_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release (tag push)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.zip.outputs.zip_name }}
+
+      - name: Create GitHub Release (manual)
+        if: github.event_name == 'workflow_dispatch' && inputs.create_release == true
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.tag_name }}
+          prerelease: ${{ inputs.prerelease }}
+          files: ${{ steps.zip.outputs.zip_name }}
